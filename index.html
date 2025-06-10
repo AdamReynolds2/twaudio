@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Twitch Audio Player</title>
   <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="favicon.ico" />
   <meta name="theme-color" content="#18181b" />
   <style>
     body {
@@ -15,25 +16,29 @@
       align-items: center;
       font-family: sans-serif;
       padding: 1em;
+      text-align: center;
     }
     input, button {
       padding: 0.5em;
       font-size: 1em;
-      margin: 0.5em 0;
+      margin: 0.5em;
     }
     iframe {
       display: none;
     }
+    #installBtn {
+      display: none;
+      margin-top: 1em;
+      padding: 0.5em 1em;
+    }
   </style>
-  <link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#18181b" />
-<link rel="icon" href="icon-192.png" />
 </head>
 <body>
   <h1>Twitch Audio Streamer</h1>
   <p>Enter a Twitch channel name:</p>
   <input type="text" id="channel" placeholder="e.g. pokimane" />
   <button onclick="playAudio()">Play Audio</button>
+  <button id="installBtn">Install App</button>
 
   <iframe
     id="twitchPlayer"
@@ -41,22 +46,40 @@
     width="0"
     height="0"
     frameborder="0"
-    scrolling="no"
-    allowfullscreen
   ></iframe>
 
   <script>
     function playAudio() {
       const channel = document.getElementById('channel').value.trim().toLowerCase();
       const iframe = document.getElementById('twitchPlayer');
+      if (!channel) return;
       iframe.src = `https://player.twitch.tv/?channel=${channel}&parent=${location.hostname}&muted=false`;
       iframe.style.display = 'block';
     }
 
-    // PWA install prompt
+    // Register service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
     }
+
+    // Handle PWA install
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = 'inline-block';
+    });
+
+    installBtn.addEventListener('click', () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => {
+          installBtn.style.display = 'none';
+        });
+      }
+    });
   </script>
 </body>
 </html>
