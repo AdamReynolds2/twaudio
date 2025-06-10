@@ -1,39 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Twitch Audio Player</title>
+  <meta charset="UTF-8" />
+  <title>Twitch Audio App</title>
   <style>
     body {
-      font-family: sans-serif;
-      max-width: 600px;
-      margin: 2rem auto;
-      padding: 1rem;
-      line-height: 1.6;
+      font-family: Arial, sans-serif;
+      max-width: 480px;
+      margin: 1rem auto;
+      padding: 0 1rem;
+    }
+    #status {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+    #vods {
+      list-style: none;
+      padding-left: 0;
+      margin-top: 0.5rem;
+    }
+    #vods li {
+      margin-bottom: 0.3rem;
     }
     input, button {
       font-size: 1rem;
       padding: 0.5rem;
     }
-    #status {
-      margin-top: 1rem;
-      font-size: 1.2rem;
-    }
-    #vods li {
-      margin-bottom: 0.5rem;
+    button {
+      margin-left: 0.5rem;
     }
   </style>
 </head>
 <body>
-  <h1>Twitch Audio App</h1>
-
-  <input type="text" id="channel" placeholder="Enter Twitch channel name">
+  <h1>Twitch Audio Player</h1>
+  
+  <input
+    id="channel"
+    type="text"
+    placeholder="Enter Twitch channel name"
+    autocomplete="off"
+  />
   <button onclick="playAudio()">Play Audio</button>
-
+  
   <div id="status"></div>
-
-  <h3>Recent VODs</h3>
-  <ul id="vods" style="list-style: none; padding: 0;"></ul>
+  <ul id="vods"></ul>
 
   <iframe
     id="twitchPlayer"
@@ -46,16 +56,51 @@
 
   <script>
     const clientId = '2mz6yz6epkb3kie35iht4re9zq985n';
+    // IMPORTANT: Replace the below token with your current valid access token
     const accessToken = 'xg4m990a9uqwoo7yqboxelvtzav2mn';
 
     async function playAudio() {
-      const channel = document.getElementById('channel').value.trim().toLowerCase();
+      const channelInput = document.getElementById('channel');
+      const channel = channelInput.value.trim().toLowerCase();
+      if (!channel) {
+        alert('Please enter a Twitch channel name.');
+        return;
+      }
+
       const iframe = document.getElementById('twitchPlayer');
+      // Set Twitch embed with correct parent domain (no path)
       iframe.src = `https://player.twitch.tv/?channel=${channel}&parent=adamreynolds2.github.io&muted=false`;
       iframe.style.display = 'block';
 
       getStreamStatus(channel);
       getRecentVODs(channel);
+    }
+
+    async function getUserData(channel) {
+      try {
+        const res = await fetch(`https://api.twitch.tv/helix/users?login=${channel}`, {
+          headers: {
+            'Client-ID': clientId,
+            'Authorization': `Bearer ${accessToken}`,
+          }
+        });
+        const json = await res.json();
+
+        if (!res.ok) {
+          console.error('Twitch API error (getUserData):', json);
+          return null;
+        }
+
+        if (!json.data || json.data.length === 0) {
+          console.warn(`No user data found for channel: ${channel}`);
+          return null;
+        }
+
+        return json.data[0];
+      } catch (err) {
+        console.error('Fetch error in getUserData:', err);
+        return null;
+      }
     }
 
     async function getStreamStatus(channel) {
@@ -68,18 +113,29 @@
         return;
       }
 
-      const response = await fetch(`https://api.twitch.tv/helix/streams?user_id=${userData.id}`, {
-        headers: {
-          'Client-ID': clientId,
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
+      try {
+        const response = await fetch(`https://api.twitch.tv/helix/streams?user_id=${userData.id}`, {
+          headers: {
+            'Client-ID': clientId,
+            'Authorization': `Bearer ${accessToken}`,
+          }
+        });
+        const data = await response.json();
 
-      const data = await response.json();
-      if (data.data.length > 0) {
-        statusDiv.innerHTML = `🔴 <strong>${channel}</strong> is <span style="color:red;">LIVE</span>`;
-      } else {
-        statusDiv.innerHTML = `⚫ <strong>${channel}</strong> is <span style="color:gray;">offline</span>`;
+        if (!response.ok) {
+          console.error('Error fetching stream status:', data);
+          statusDiv.innerText = 'Error fetching live status.';
+          return;
+        }
+
+        if (!data.data || data.data.length === 0) {
+          statusDiv.innerHTML = `⚫ <strong>${channel}</strong> is <span style="color:gray;">offline</span>`;
+        } else {
+          statusDiv.innerHTML = `🔴 <strong>${channel}</strong> is <span style="color:red;">LIVE</span>`;
+        }
+      } catch (err) {
+        console.error('Fetch error in getStreamStatus:', err);
+        statusDiv.innerText = 'Error fetching live status.';
       }
     }
 
@@ -89,41 +145,40 @@
 
       const userData = await getUserData(channel);
       if (!userData) {
-        vodList.innerHTML = '<li>User not found.</li>';
+        vodList.innerHTML = '';
         return;
       }
 
-      const response = await fetch(`https://api.twitch.tv/helix/videos?user_id=${userData.id}&type=archive&first=5`, {
-        headers: {
-          'Client-ID': clientId,
-          'Authorization': `Bearer ${accessToken}`
+      try {
+        const response = await fetch(`https://api.twitch.tv/helix/videos?user_id=${userData.id}&type=archive&first=5`, {
+          headers: {
+            'Client-ID': clientId,
+            'Authorization': `Bearer ${accessToken}`,
+          }
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          console.error('Error fetching recent VODs:', data);
+          vodList.innerHTML = '<li>Error loading VODs.</li>';
+          return;
         }
-      });
 
-      const data = await response.json();
-      vodList.innerHTML = '';
+        if (!data.data || data.data.length === 0) {
+          vodList.innerHTML = '<li>No recent VODs available.</li>';
+          return;
+        }
 
-      if (data.data.length === 0) {
-        vodList.innerHTML = '<li>No recent VODs available.</li>';
-        return;
+        vodList.innerHTML = '';
+        data.data.forEach(video => {
+          const li = document.createElement('li');
+          li.innerHTML = `<a href="${video.url}" target="_blank" rel="noopener noreferrer">${video.title}</a> (${video.duration})`;
+          vodList.appendChild(li);
+        });
+      } catch (err) {
+        console.error('Fetch error in getRecentVODs:', err);
+        vodList.innerHTML = '<li>Error loading VODs.</li>';
       }
-
-      data.data.forEach(video => {
-        const li = document.createElement('li');
-        li.innerHTML = `<a href="${video.url}" target="_blank">${video.title}</a> (${video.duration})`;
-        vodList.appendChild(li);
-      });
-    }
-
-    async function getUserData(channel) {
-      const res = await fetch(`https://api.twitch.tv/helix/users?login=${channel}`, {
-        headers: {
-          'Client-ID': clientId,
-          'Authorization': `Bearer ${accessToken}`
-        }
-      });
-      const json = await res.json();
-      return json.data[0];
     }
   </script>
 </body>
