@@ -1,145 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>Twitch Audio Player</title>
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#18181b" />
-  <style>
-    body {
-      background: #18181b;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      font-family: sans-serif;
-      padding: 1em;
-    }
-    input, button {
-      padding: 0.5em;
-      font-size: 1em;
-      margin: 0.5em 0;
-    }
-    iframe {
-      display: none;
-    }
-  </style>
 </head>
 <body>
-  <h1>Twitch Audio Streamer</h1>
-  <p>Enter a Twitch channel name:</p>
-  <input type="text" id="channel" placeholder="e.g. pokimane" />
+  <h1>Twitch Audio App</h1>
+  
+  <input type="text" id="channel" placeholder="Enter Twitch channel name">
   <button onclick="playAudio()">Play Audio</button>
-<!-- Add this below your input/button -->
-<div id="status"></div>
-<ul id="vods" style="list-style: none; padding: 0;"></ul>
 
-<script>
-  const clientId = '2mz6yz6epkb3kie35iht4re9zq985n';
-  const accessToken = 'eqhx06h1bxf2swdulwim5mrt2qqb7v';
+  <!-- ✅ Add the new containers HERE -->
+  <div id="status"></div>
+  <ul id="vods" style="list-style: none; padding: 0;"></ul>
 
-  async function playAudio() {
-    const channel = document.getElementById('channel').value.trim().toLowerCase();
-    const iframe = document.getElementById('twitchPlayer');
-    iframe.src = `https://player.twitch.tv/?channel=${channel}&parent=${location.hostname}&muted=false`;
-    iframe.style.display = 'block';
-
-    getStreamStatus(channel);
-    getRecentVODs(channel);
-  }
-
-  async function getStreamStatus(channel) {
-    const statusDiv = document.getElementById('status');
-    statusDiv.innerText = 'Checking live status...';
-
-    const userData = await getUserData(channel);
-    if (!userData) {
-      statusDiv.innerText = 'User not found.';
-      return;
-    }
-
-    const response = await fetch(`https://api.twitch.tv/helix/streams?user_id=${userData.id}`, {
-      headers: {
-        'Client-ID': clientId,
-        'Authorization': `Bearer ${accessToken}`
-      }
-    });
-
-    const data = await response.json();
-    if (data.data.length > 0) {
-      statusDiv.innerHTML = `🔴 <strong>${channel}</strong> is <span style="color:red;">LIVE</span>`;
-    } else {
-      statusDiv.innerHTML = `⚫ <strong>${channel}</strong> is <span style="color:gray;">offline</span>`;
-    }
-  }
-
-  async function getRecentVODs(channel) {
-    const vodList = document.getElementById('vods');
-    vodList.innerHTML = 'Loading recent VODs...';
-
-    const userData = await getUserData(channel);
-    if (!userData) {
-      vodList.innerHTML = '';
-      return;
-    }
-
-    const response = await fetch(`https://api.twitch.tv/helix/videos?user_id=${userData.id}&type=archive&first=5`, {
-      headers: {
-        'Client-ID': clientId,
-        'Authorization': `Bearer ${accessToken}`
-      }
-    });
-
-    const data = await response.json();
-    vodList.innerHTML = '';
-    data.data.forEach(video => {
-      const li = document.createElement('li');
-      li.innerHTML = `<a href="${video.url}" target="_blank">${video.title}</a> (${(video.duration)})`;
-      vodList.appendChild(li);
-    });
-
-    if (data.data.length === 0) {
-      vodList.innerHTML = '<li>No recent VODs available.</li>';
-    }
-  }
-
-  async function getUserData(channel) {
-    const res = await fetch(`https://api.twitch.tv/helix/users?login=${channel}`, {
-      headers: {
-        'Client-ID': clientId,
-        'Authorization': `Bearer ${accessToken}`
-      }
-    });
-    const json = await res.json();
-    return json.data[0];
-  }
-</script>
-
+  <!-- ✅ Add the Twitch iframe -->
   <iframe
     id="twitchPlayer"
-    allow="autoplay"
     width="0"
     height="0"
     frameborder="0"
-    scrolling="no"
-    allowfullscreen
+    allowfullscreen="true"
+    style="display:none;"
   ></iframe>
 
+  <!-- ✅ Add the script at the END of the body -->
   <script>
-    function playAudio() {
+    const clientId = '2mz6yz6epkb3kie35iht4re9zq985n';
+    const accessToken = 'eqhx06h1bxf2swdulwim5mrt2qqb7v';
+
+    async function playAudio() {
       const channel = document.getElementById('channel').value.trim().toLowerCase();
       const iframe = document.getElementById('twitchPlayer');
       iframe.src = `https://player.twitch.tv/?channel=${channel}&parent=${location.hostname}&muted=false`;
       iframe.style.display = 'block';
+
+      getStreamStatus(channel);
+      getRecentVODs(channel);
     }
 
-    // PWA install prompt
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
+    async function getStreamStatus(channel) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerText = 'Checking live status...';
+
+      const userData = await getUserData(channel);
+      if (!userData) {
+        statusDiv.innerText = 'User not found.';
+        return;
+      }
+
+      const response = await fetch(`https://api.twitch.tv/helix/streams?user_id=${userData.id}`, {
+        headers: {
+          'Client-ID': clientId,
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      const data = await response.json();
+      if (data.data.length > 0) {
+        statusDiv.innerHTML = `🔴 <strong>${channel}</strong> is <span style="color:red;">LIVE</span>`;
+      } else {
+        statusDiv.innerHTML = `⚫ <strong>${channel}</strong> is <span style="color:gray;">offline</span>`;
+      }
+    }
+
+    async function getRecentVODs(channel) {
+      const vodList = document.getElementById('vods');
+      vodList.innerHTML = 'Loading recent VODs...';
+
+      const userData = await getUserData(channel);
+      if (!userData) {
+        vodList.innerHTML = '';
+        return;
+      }
+
+      const response = await fetch(`https://api.twitch.tv/helix/videos?user_id=${userData.id}&type=archive&first=5`, {
+        headers: {
+          'Client-ID': clientId,
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      const data = await response.json();
+      vodList.innerHTML = '';
+      data.data.forEach(video => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="${video.url}" target="_blank">${video.title}</a> (${video.duration})`;
+        vodList.appendChild(li);
+      });
+
+      if (data.data.length === 0) {
+        vodList.innerHTML = '<li>No recent VODs available.</li>';
+      }
+    }
+
+    async function getUserData(channel) {
+      const res = await fetch(`https://api.twitch.tv/helix/users?login=${channel}`, {
+        headers: {
+          'Client-ID': clientId,
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+      const json = await res.json();
+      return json.data[0];
     }
   </script>
 </body>
 </html>
-
-
