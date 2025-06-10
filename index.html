@@ -27,12 +27,12 @@
   <!-- ✅ Add the script at the END of the body -->
   <script>
     const clientId = '2mz6yz6epkb3kie35iht4re9zq985n';
-    const accessToken = 'eqhx06h1bxf2swdulwim5mrt2qqb7v';
+    const accessToken = 'j6bsb8rjmaxcxgc09vy1v5kgyjbpb0';
 
     async function playAudio() {
       const channel = document.getElementById('channel').value.trim().toLowerCase();
       const iframe = document.getElementById('twitchPlayer');
-      iframe.src = `https://player.twitch.tv/?channel=${channel}&parent=${location.hostname}&muted=false`;
+      iframe.src = `https://player.twitch.tv/?channel=${channel}&parent=adamreynolds2.github.io&muted=false`;
       iframe.style.display = 'block';
 
       getStreamStatus(channel);
