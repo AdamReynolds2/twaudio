@@ -6,7 +6,7 @@
   <title>Twitch Audio Player</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#18181b" />
-  <style> 
+  <style>
     body {
       background: #18181b;
       color: white;
@@ -15,22 +15,66 @@
       align-items: center;
       font-family: sans-serif;
       padding: 1em;
+      min-height: 100vh; /* Ensure it takes full viewport height */
+      justify-content: center; /* Center content vertically */
     }
     input, button {
       padding: 0.5em;
       font-size: 1em;
-      margin: 0.5em 0;
+      margin: 0.5em 0.2em; /* Adjusted margin for buttons */
+      border: 1px solid #9147ff;
+      border-radius: 4px;
+      background-color: #2a2a2e;
+      color: white;
+      cursor: pointer;
+    }
+    input {
+        background-color: #333;
+        color: white;
+        padding: 0.7em;
+        width: 250px;
+        box-sizing: border-box; /* Include padding in width */
+    }
+    input::placeholder {
+        color: #bbb;
+    }
+    button:hover:not(:disabled) {
+        background-color: #9147ff;
+        color: white;
+    }
+    button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    #controls {
+        display: flex;
+        flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+        justify-content: center;
+        margin-top: 1em;
     }
     iframe {
-      display: none;
+      display: none; /* Hidden by default, shown when playing */
+    }
+    #messages {
+        margin-top: 1em;
+        font-size: 1.1em;
+        color: #ccc;
     }
   </style>
 </head>
 <body>
   <h1>Twitch Audio Streamer</h1>
   <p>Enter a Twitch channel name:</p>
-  <input type="text" id="channel" placeholder="e.g. pokimane" />
-  <button onclick="playAudio()">Play Audio</button>
+  <input type="text" id="channelInput" placeholder="e.g. pokimane" autocomplete="off" />
+
+  <div id="controls">
+    <button id="playBtn">Play</button>
+    <button id="pauseBtn" disabled>Pause</button>
+    <button id="muteBtn">🔊</button>
+    <button id="replayBtn" title="Reload Stream">⟳</button>
+  </div>
+
+  <p id="messages"></p>
 
   <iframe
     id="twitchPlayer"
@@ -43,12 +87,99 @@
   ></iframe>
 
   <script>
-    function playAudio() {
-      const channel = document.getElementById('channel').value.trim().toLowerCase();
-      const iframe = document.getElementById('twitchPlayer');
-      iframe.src = https://player.twitch.tv/?channel=${channel}&parent=${location.hostname}&muted=false;
-      iframe.style.display = 'block';
+    // Elements
+    const channelInput = document.getElementById('channelInput');
+    const playBtn = document.getElementById('playBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const muteBtn = document.getElementById('muteBtn');
+    const replayBtn = document.getElementById('replayBtn');
+    const twitchPlayer = document.getElementById('twitchPlayer');
+    const messages = document.getElementById('messages');
+
+    // State
+    let isMuted = true; // Twitch iframe starts muted
+    let isPlaying = false;
+    let currentChannel = '';
+
+    // Function to update mute button text
+    function updateMuteBtn() {
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
     }
+
+    // Play channel function
+    function playChannel(channel) {
+      if (!channel) {
+        messages.textContent = 'Please enter a channel name.';
+        return;
+      }
+      currentChannel = channel.toLowerCase();
+      messages.textContent = `Loading ${currentChannel}...`;
+
+      twitchPlayer.src = `https://player.twitch.tv/?channel=${currentChannel}&parent=${location.hostname}&muted=${isMuted ? 'true' : 'false'}`;
+      twitchPlayer.style.display = 'block'; // Make iframe visible (though 0x0)
+
+      isPlaying = true;
+      playBtn.disabled = true;
+      pauseBtn.disabled = false;
+
+      // When the iframe loads, update message
+      twitchPlayer.onload = () => {
+        messages.textContent = `Now playing: ${currentChannel}`;
+      };
+
+      // Handle potential errors (e.g., channel not found, network issues)
+      // Note: Direct error handling for Twitch iframe load failures can be tricky due to cross-origin policies.
+      // This is a basic approach.
+      twitchPlayer.onerror = () => {
+        messages.textContent = `Failed to load stream for ${currentChannel}.`;
+        pauseChannel(); // Reset controls if there's an error
+      };
+    }
+
+    // Pause player by removing iframe src
+    function pauseChannel() {
+      twitchPlayer.src = '';
+      twitchPlayer.style.display = 'none'; // Hide iframe
+      messages.textContent = 'Paused.';
+      isPlaying = false;
+      playBtn.disabled = false;
+      pauseBtn.disabled = true;
+    }
+
+    // Mute/unmute toggle
+    function toggleMute() {
+      isMuted = !isMuted;
+      updateMuteBtn();
+      // If a channel is playing, reload the stream with the new mute state
+      if (isPlaying && currentChannel) {
+        playChannel(currentChannel);
+      } else if (currentChannel) {
+        // If not playing but a channel is in input, prepare iframe with new mute state
+        twitchPlayer.src = `https://player.twitch.tv/?channel=${currentChannel}&parent=${location.hostname}&muted=${isMuted ? 'true' : 'false'}`;
+      }
+    }
+
+    // Event Listeners
+    playBtn.addEventListener('click', () => playChannel(channelInput.value.trim()));
+    pauseBtn.addEventListener('click', pauseChannel);
+    muteBtn.addEventListener('click', toggleMute);
+    replayBtn.addEventListener('click', () => {
+      if (currentChannel) { // Only replay if a channel is currently set
+        playChannel(currentChannel);
+      } else {
+        messages.textContent = 'No channel to replay.';
+      }
+    });
+
+    // Allow pressing Enter in the input to play
+    channelInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        playChannel(channelInput.value.trim());
+      }
+    });
+
+    // Initialize mute button display
+    updateMuteBtn();
 
     // PWA install prompt
     if ('serviceWorker' in navigator) {
