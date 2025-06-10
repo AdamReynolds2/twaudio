@@ -97,7 +97,7 @@
     const messages = document.getElementById('messages');
 
     // State
-    let isMuted = true; // Twitch iframe starts muted
+    let isMuted = false; // CHANGED: Set to false to load unmuted
     let isPlaying = false;
     let currentChannel = '';
 
@@ -115,7 +115,7 @@
       currentChannel = channel.toLowerCase();
       messages.textContent = `Loading ${currentChannel}...`;
 
-      twitchPlayer.src = `https://player.twitch.tv/?channel=${currentChannel}&parent=${location.hostname}&muted=${isMuted ? 'true' : 'false'}`;
+      twitchPlayer.src = `https://player.twitch.tv/?channel=<span class="math-inline">\{currentChannel\}&parent\=</span>{location.hostname}&muted=${isMuted ? 'true' : 'false'}`;
       twitchPlayer.style.display = 'block'; // Make iframe visible (though 0x0)
 
       isPlaying = true;
@@ -155,7 +155,7 @@
         playChannel(currentChannel);
       } else if (currentChannel) {
         // If not playing but a channel is in input, prepare iframe with new mute state
-        twitchPlayer.src = `https://player.twitch.tv/?channel=${currentChannel}&parent=${location.hostname}&muted=${isMuted ? 'true' : 'false'}`;
+        twitchPlayer.src = `https://player.twitch.tv/?channel=<span class="math-inline">\{currentChannel\}&parent\=</span>{location.hostname}&muted=${isMuted ? 'true' : 'false'}`;
       }
     }
 
@@ -184,7 +184,3 @@
     // PWA install prompt
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
-    }
-  </script>
-</body>
-</html>
