@@ -8,6 +8,177 @@
   <link rel="icon" href="favicon.ico" />
   <meta name="theme-color" content="#18181b" />
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Basic light/dark styles */
+    :root {
+      --bg-dark: #18181b;
+      --text-dark: #fff;
+      --bg-light: #f4f4f4;
+      --text-light: #222;
+    }
+    body {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+      font-family: sans-serif;
+      margin: 0;
+      padding: 1em;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.light {
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+    header {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1em;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.5em;
+    }
+    button {
+      cursor: pointer;
+      padding: 0.5em 1em;
+      font-size: 1em;
+      margin: 0 0.25em;
+    }
+    #playerSection {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #controls {
+      margin-top: 1em;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5em;
+      justify-content: center;
+      width: 100%;
+    }
+    input[type="text"], input[type="number"] {
+      padding: 0.5em;
+      font-size: 1em;
+      flex-grow: 1;
+      max-width: 200px;
+    }
+    #nowPlaying {
+      margin-top: 0.5em;
+      font-weight: bold;
+      min-height: 1.2em;
+      animation: pulse 2s infinite;
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+    }
+    #nowPlaying .icon {
+      animation: spin 2s linear infinite;
+    }
+    #loading {
+      margin-top: 0.5em;
+      font-style: italic;
+    }
+    #loading.hidden, #nowPlaying.hidden, #sleepTimerCountdown.hidden {
+      display: none;
+    }
+    #visualizer {
+      margin-top: 1em;
+      width: 100%;
+      height: 60px;
+      background: rgba(255 255 255 / 0.1);
+      border-radius: 6px;
+    }
+    #sleepTimerSection {
+      margin-top: 1em;
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    aside#sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      background: var(--bg-dark);
+      color: var(--text-dark);
+      width: 280px;
+      height: 100%;
+      box-shadow: 2px 0 6px rgba(0,0,0,0.8);
+      padding: 1em;
+      overflow-y: auto;
+      transition: transform 0.3s ease-in-out;
+      transform: translateX(-100%);
+      z-index: 1000;
+    }
+    body.light aside#sidebar {
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+    aside#sidebar.visible {
+      transform: translateX(0);
+    }
+    #openSidebarBtn, #closeSidebarBtn {
+      font-size: 1.5em;
+      background: none;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      user-select: none;
+    }
+    #channelHistory {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #channelHistory li {
+      margin: 0.5em 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+    }
+    #channelHistory img {
+      width: 60px;
+      height: 34px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    iframe {
+      display: none;
+    }
+    /* Responsive */
+    @media (max-width: 600px) {
+      #playerSection {
+        max-width: 100%;
+      }
+      #controls {
+        flex-direction: column;
+        gap: 0.5em;
+      }
+      input[type="text"], input[type="number"] {
+        max-width: 100%;
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -16,8 +187,8 @@
   </header>
 
   <main>
-    <section id="playerSection">
-      <div id="nowPlaying" aria-live="polite"></div>
+    <section id="playerSection" aria-label="Audio player">
+      <div id="nowPlaying" aria-live="polite" class="hidden"></div>
 
       <div id="loading" class="hidden">Connecting...</div>
 
@@ -28,6 +199,7 @@
         height="0"
         frameborder="0"
         scrolling="no"
+        muted
       ></iframe>
 
       <div id="controls">
@@ -36,6 +208,7 @@
           id="channelInput"
           placeholder="Enter Twitch channel (e.g. pokimane)"
           autocomplete="off"
+          aria-label="Twitch channel input"
         />
         <button id="playBtn">Play</button>
         <button id="pauseBtn" disabled>Pause</button>
@@ -43,28 +216,325 @@
         <button id="replayBtn" title="Reload Stream">⟳</button>
       </div>
 
-      <div id="visualizer"></div>
+      <div id="visualizer" aria-hidden="true"></div>
 
       <div id="sleepTimerSection">
         <label for="sleepTimer">Sleep timer (minutes):</label>
-        <input type="number" id="sleepTimer" min="1" max="120" />
+        <input type="number" id="sleepTimer" min="1" max="120" aria-label="Sleep timer in minutes" />
         <button id="startSleepTimer">Start</button>
         <button id="cancelSleepTimer" disabled>Cancel</button>
-        <div id="sleepTimerCountdown"></div>
+        <div id="sleepTimerCountdown" class="hidden" aria-live="polite"></div>
       </div>
     </section>
 
-    <aside id="sidebar" class="hidden" aria-label="Sidebar with history and settings">
+    <aside id="sidebar" aria-label="Sidebar with history and settings" class="hidden">
       <button id="closeSidebarBtn" aria-label="Close sidebar">✖</button>
       <h2>Recent Channels</h2>
-      <ul id="channelHistory"></ul>
+      <ul id="channelHistory" aria-live="polite"></ul>
     </aside>
 
     <button id="openSidebarBtn" aria-label="Open sidebar">☰</button>
 
-    <button id="installBtn" class="hidden">Add to Home Screen</button>
+    <button id="installBtn" class="hidden" aria-label="Add to Home Screen">Add to Home Screen</button>
   </main>
 
-  <script src="app.js"></script>
-</body>
-</html>
+  <script>
+    (() => {
+      const channelInput = document.getElementById('channelInput');
+      const playBtn = document.getElementById('playBtn');
+      const pauseBtn = document.getElementById('pauseBtn');
+      const muteBtn = document.getElementById('muteBtn');
+      const replayBtn = document.getElementById('replayBtn');
+      const twitchPlayer = document.getElementById('twitchPlayer');
+      const nowPlaying = document.getElementById('nowPlaying');
+      const loading = document.getElementById('loading');
+      const darkModeToggle = document.getElementById('darkModeToggle');
+      const channelHistoryList = document.getElementById('channelHistory');
+      const sidebar = document.getElementById('sidebar');
+      const openSidebarBtn = document.getElementById('openSidebarBtn');
+      const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+      const installBtn = document.getElementById('installBtn');
+      const sleepTimerInput = document.getElementById('sleepTimer');
+      const startSleepTimerBtn = document.getElementById('startSleepTimer');
+      const cancelSleepTimerBtn = document.getElementById('cancelSleepTimer');
+      const sleepTimerCountdown = document.getElementById('sleepTimerCountdown');
+      const visualizer = document.getElementById('visualizer');
+
+      let sleepTimerId = null;
+      let sleepTimerEnd = null;
+      let audioContext, analyser, source, dataArray, animationId;
+      let isMuted = true;
+      let isPlaying = false;
+      let lastChannel = null;
+      let deferredPrompt = null;
+
+      // Theme setup
+      function setTheme(isDark) {
+        if (isDark) {
+          document.body.classList.remove('light');
+          darkModeToggle.textContent = '🌙';
+          localStorage.setItem('darkMode', 'true');
+        } else {
+          document.body.classList.add('light');
+          darkModeToggle.textContent = '☀️';
+          localStorage.setItem('darkMode', 'false');
+        }
+      }
+
+      darkModeToggle.addEventListener('click', () => {
+        const isDark = document.body.classList.contains('light');
+        setTheme(isDark);
+      });
+
+      // Load theme on startup
+      setTheme(localStorage.getItem('darkMode') !== 'false');
+
+      // Channel history functions
+      function loadChannelHistory() {
+        const history = JSON.parse(localStorage.getItem('channelHistory') || '[]');
+        channelHistoryList.innerHTML = '';
+        history.forEach(channel => {
+          const li = document.createElement('li');
+          li.tabIndex = 0;
+          li.setAttribute('role', 'button');
+          li.setAttribute('aria-label', `Play channel ${channel}`);
+          li.innerHTML = `
+            <img src="https://static-cdn.jtvnw.net/previews-ttv/live_user_${channel}-60x34.jpg" alt="${channel} thumbnail" onerror="this.style.display='none'" />
+            <span>${channel}</span>
+          `;
+          li.addEventListener('click', () => {
+            playChannel(channel);
+            toggleSidebar(false);
+          });
+          li.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              playChannel(channel);
+              toggleSidebar(false);
+            }
+          });
+          channelHistoryList.appendChild(li);
+        });
+      }
+
+      function saveChannelHistory(channel) {
+        let history = JSON.parse(localStorage.getItem('channelHistory') || '[]');
+        history = history.filter(c => c !== channel);
+        history.unshift(channel);
+        if (history.length > 20) history.pop();
+        localStorage.setItem('channelHistory', JSON.stringify(history));
+        loadChannelHistory();
+      }
+
+      // Sidebar toggle
+      function toggleSidebar(show) {
+        if (show) {
+          sidebar.classList.add('visible');
+          sidebar.classList.remove('hidden');
+          sidebar.setAttribute('aria-hidden', 'false');
+        } else {
+          sidebar.classList.remove('visible');
+          sidebar.classList.add('hidden');
+          sidebar.setAttribute('aria-hidden', 'true');
+        }
+      }
+      openSidebarBtn.addEventListener('click', () => toggleSidebar(true));
+      closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
+
+      // Play channel
+      function playChannel(channel) {
+        if (!channel) return;
+        loading.classList.remove('hidden');
+        nowPlaying.classList.add('hidden');
+        pauseBtn.disabled = false;
+        isPlaying = true;
+        lastChannel = channel;
+        channelInput.value = channel;
+
+        // Set Twitch iframe src with parent domain and muted=false for autoplay sound
+        twitchPlayer.src = `https://player.twitch.tv/?channel=${channel}&parent=${location.hostname}&muted=${isMuted ? 'true' : 'false'}`;
+
+        // Show now playing with icon
+        nowPlaying.innerHTML = `<span class="icon">▶️</span> Now Playing: ${channel}`;
+        nowPlaying.classList.remove('hidden');
+
+        saveChannelHistory(channel);
+        localStorage.setItem('lastChannel', channel);
+
+        // Show iframe and controls
+        twitchPlayer.style.display = 'block';
+        playBtn.disabled = true;
+        pauseBtn.disabled = false;
+
+        // Setup visualizer
+        setupVisualizer();
+
+        // Remove loading after a short delay (simulate connect)
+        setTimeout(() => {
+          loading.classList.add('hidden');
+        }, 1500);
+      }
+
+      // Pause playback by hiding iframe (Twitch player itself does not have pause API)
+      function pausePlayback() {
+        isPlaying = false;
+        playBtn.disabled = false;
+        pauseBtn.disabled = true;
+        twitchPlayer.style.display = 'none';
+        nowPlaying.classList.add('hidden');
+        cancelSleepTimer();
+        stopVisualizer();
+      }
+
+      // Mute toggle
+      muteBtn.addEventListener('click', () => {
+        isMuted = !isMuted;
+        // Reload iframe with muted param updated
+        if (lastChannel) {
+          twitchPlayer.src = `https://player.twitch.tv/?channel=${lastChannel}&parent=${location.hostname}&muted=${isMuted ? 'true' : 'false'}`;
+          twitchPlayer.style.display = 'block';
+          nowPlaying.classList.remove('hidden');
+          playBtn.disabled = true;
+          pauseBtn.disabled = false;
+        }
+        muteBtn.textContent = isMuted ? '🔇' : '🔊';
+      });
+
+      // Replay button reloads iframe
+      replayBtn.addEventListener('click', () => {
+        if (lastChannel) {
+          playChannel(lastChannel);
+        }
+      });
+
+      // Play button
+      playBtn.addEventListener('click', () => {
+        const channel = channelInput.value.trim().toLowerCase();
+        if (channel) playChannel(channel);
+      });
+
+      // Pause button
+      pauseBtn.addEventListener('click', pausePlayback);
+
+      // Keyboard shortcuts
+      window.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return; // avoid interfering while typing
+        switch (e.key.toLowerCase()) {
+          case 'enter':
+            const channel = channelInput.value.trim().toLowerCase();
+            if (channel) playChannel(channel);
+            break;
+          case 'm':
+            muteBtn.click();
+            break;
+          case 'r':
+            replayBtn.click();
+            break;
+          case 'p':
+            if (isPlaying) pausePlayback();
+            else if (lastChannel) playChannel(lastChannel);
+            break;
+        }
+      });
+
+      // Sleep timer
+      function updateSleepCountdown() {
+        const remaining = Math.max(0, Math.floor((sleepTimerEnd - Date.now()) / 1000));
+        if (remaining <= 0) {
+          cancelSleepTimer();
+          pausePlayback();
+          sleepTimerCountdown.textContent = 'Sleep timer ended.';
+          sleepTimerCountdown.classList.remove('hidden');
+          return;
+        }
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        sleepTimerCountdown.textContent = `Sleeping in ${mins}:${secs.toString().padStart(2,'0')} minutes`;
+        sleepTimerCountdown.classList.remove('hidden');
+      }
+
+      startSleepTimerBtn.addEventListener('click', () => {
+        const mins = parseInt(sleepTimerInput.value, 10);
+        if (!mins || mins < 1 || mins > 120) return alert('Enter a valid number between 1 and 120');
+        sleepTimerEnd = Date.now() + mins * 60000;
+        sleepTimerId = setInterval(updateSleepCountdown, 1000);
+        updateSleepCountdown();
+        startSleepTimerBtn.disabled = true;
+        cancelSleepTimerBtn.disabled = false;
+      });
+
+      cancelSleepTimerBtn.addEventListener('click', cancelSleepTimer);
+
+      function cancelSleepTimer() {
+        if (sleepTimerId) {
+          clearInterval(sleepTimerId);
+          sleepTimerId = null;
+          sleepTimerCountdown.classList.add('hidden');
+          startSleepTimerBtn.disabled = false;
+          cancelSleepTimerBtn.disabled = true;
+        }
+      }
+
+      // Visualizer
+      function setupVisualizer() {
+        stopVisualizer();
+        if (!window.AudioContext) return;
+
+        audioContext = new AudioContext();
+        analyser = audioContext.createAnalyser();
+        source = audioContext.createMediaElementSource(twitchPlayer);
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+        analyser.fftSize = 64;
+
+        const bufferLength = analyser.frequencyBinCount;
+        dataArray = new Uint8Array(bufferLength);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = visualizer.clientWidth;
+        canvas.height = visualizer.clientHeight;
+        visualizer.innerHTML = '';
+        visualizer.appendChild(canvas);
+
+        const ctx = canvas.getContext('2d');
+
+        function draw() {
+          animationId = requestAnimationFrame(draw);
+
+          analyser.getByteFrequencyData(dataArray);
+
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          const barWidth = (canvas.width / bufferLength) * 1.5;
+          let x = 0;
+
+          for (let i = 0; i < bufferLength; i++) {
+            const barHeight = dataArray[i] / 2;
+            ctx.fillStyle = `hsl(${barHeight * 2}, 100%, 50%)`;
+            ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+            x += barWidth + 1;
+          }
+        }
+        draw();
+      }
+      function stopVisualizer() {
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+        visualizer.innerHTML = '';
+        if (audioContext) {
+          audioContext.close();
+          audioContext = null;
+        }
+      }
+
+      // Load last played channel on start
+      window.addEventListener('load', () => {
+        const last = localStorage.getItem('lastChannel');
+        if (last) {
+          playChannel(last);
+        }
+        loadChannelHistory();
+
+        // PWA install prompt
+        window.addEventListener('beforeinstallprompt', (e) =>
