@@ -2,84 +2,69 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Twitch Audio Player</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="favicon.ico" />
   <meta name="theme-color" content="#18181b" />
-  <style>
-    body {
-      background: #18181b;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      font-family: sans-serif;
-      padding: 1em;
-      text-align: center;
-    }
-    input, button {
-      padding: 0.5em;
-      font-size: 1em;
-      margin: 0.5em;
-    }
-    iframe {
-      display: none;
-    }
-    #installBtn {
-      display: none;
-      margin-top: 1em;
-      padding: 0.5em 1em;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <h1>Twitch Audio Streamer</h1>
-  <p>Enter a Twitch channel name:</p>
-  <input type="text" id="channel" placeholder="e.g. pokimane" />
-  <button onclick="playAudio()">Play Audio</button>
-  <button id="installBtn">Install App</button>
+  <header>
+    <h1>Twitch Audio Streamer</h1>
+    <button id="darkModeToggle" aria-label="Toggle dark mode">🌙</button>
+  </header>
 
-  <iframe
-    id="twitchPlayer"
-    allow="autoplay"
-    width="0"
-    height="0"
-    frameborder="0"
-  ></iframe>
+  <main>
+    <section id="playerSection">
+      <div id="nowPlaying" aria-live="polite"></div>
 
-  <script>
-    function playAudio() {
-      const channel = document.getElementById('channel').value.trim().toLowerCase();
-      const iframe = document.getElementById('twitchPlayer');
-      if (!channel) return;
-      iframe.src = `https://player.twitch.tv/?channel=${channel}&parent=${location.hostname}&muted=false`;
-      iframe.style.display = 'block';
-    }
+      <div id="loading" class="hidden">Connecting...</div>
 
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
-    }
+      <iframe
+        id="twitchPlayer"
+        allow="autoplay"
+        width="0"
+        height="0"
+        frameborder="0"
+        scrolling="no"
+      ></iframe>
 
-    // Handle PWA install
-    let deferredPrompt;
-    const installBtn = document.getElementById('installBtn');
+      <div id="controls">
+        <input
+          type="text"
+          id="channelInput"
+          placeholder="Enter Twitch channel (e.g. pokimane)"
+          autocomplete="off"
+        />
+        <button id="playBtn">Play</button>
+        <button id="pauseBtn" disabled>Pause</button>
+        <button id="muteBtn" aria-label="Mute/Unmute">🔊</button>
+        <button id="replayBtn" title="Reload Stream">⟳</button>
+      </div>
 
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      installBtn.style.display = 'inline-block';
-    });
+      <div id="visualizer"></div>
 
-    installBtn.addEventListener('click', () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => {
-          installBtn.style.display = 'none';
-        });
-      }
-    });
-  </script>
+      <div id="sleepTimerSection">
+        <label for="sleepTimer">Sleep timer (minutes):</label>
+        <input type="number" id="sleepTimer" min="1" max="120" />
+        <button id="startSleepTimer">Start</button>
+        <button id="cancelSleepTimer" disabled>Cancel</button>
+        <div id="sleepTimerCountdown"></div>
+      </div>
+    </section>
+
+    <aside id="sidebar" class="hidden" aria-label="Sidebar with history and settings">
+      <button id="closeSidebarBtn" aria-label="Close sidebar">✖</button>
+      <h2>Recent Channels</h2>
+      <ul id="channelHistory"></ul>
+    </aside>
+
+    <button id="openSidebarBtn" aria-label="Open sidebar">☰</button>
+
+    <button id="installBtn" class="hidden">Add to Home Screen</button>
+  </main>
+
+  <script src="app.js"></script>
 </body>
 </html>
